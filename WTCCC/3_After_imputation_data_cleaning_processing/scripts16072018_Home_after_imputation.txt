@@ -1,0 +1,309 @@
+# 11/07/2018
+
+# combine vcfs into one vcf
+bcftools concat -no-version 1.vcf.gz 2.vcf.gz 3.vcf.gz 4.vcf.gz 5.vcf.gz 6.vcf.gz 7.vcf.gz 8.vcf.gz 9.vcf.gz 10.vcf.gz 11.vcf.gz 12.vcf.gz 13.vcf.gz 14.vcf.gz 15.vcf.gz 16.vcf.gz 17.vcf.gz 18.vcf.gz 19.vcf.gz 20.vcf.gz 21.vcf.gz 22.vcf.gz X.vcf.gz -o WTCCCT1D_full.vcf.gz -O z --threads 10
+
+# create inputed SNP Input2 scores
+bcftools query -f '%CHROM\t%ID\t%POS\t%REF\t%ALT\t%INFO/AC\t%INFO/AN\t%INFO/RefPanelAF\t%INFO/INFO\n' WTCCCT1D_full.vcf.gz -o WTCCCT1D_full_imputed_Input2_scores.txt
+
+awk '{ if ($9 < 0.3) { print } }' WTCCCT1D_full_imputed_Input2_scores.txt  > WTCCCT1D_full_imputed_SNPs_below0.3.txt
+
+awk '{ if ($9 < 0.8) { print } }' WTCCCT1D_full_imputed_Input2_scores.txt  > WTCCCT1D_full_imputed_SNPs_below0.8.txt
+
+# At his point WTCCCT1D_full_imputed_SNPs_below0.8.txt is chosen
+
+# convert vcf to plink bed format
+plink --vcf WTCCCT1D_full.vcf.gz --const-fid  --keep-allele-order --make-bed --out WTCCCT1D_full_imputed
+
+#14/07/2018
+# create two python programs to replace "." missing SNP ids from WTCCCT1D_full_imputed.bim and test_WTCCCT1D_full_imputed_SNPs_below0.8.txt
+# There are three new idexes created in the SNP dataset for speeding up the searching. 
+python find_rsID_for_dot_SNP_Input2_scores_checked.py to create WTCCCT1D_full_imputed_SNPs_below0.8_rsID.txt
+python find_rsID_for_dot_SNP_WTCCCT1D_imputed.py to create WTCCCT1D_full_imputed_rsID.bim
+
+
+# test for exclude duplicated SNP
+plink -bfile WTCCCT1D_full_imputed --exclude  exclude_SNP --out  WTCCCT1D_full_imputed_excluded --make-bed
+The output showed the Suplicated SNPs could be removed in the the excluding process
+
+# remove all the SNPs with rdID because they are not useful to us in my project.
+cat WTCCCT1D_full_imputed_rsID | grep -v "chr" | cut -f2 | sort | uniq > WTCCCT1D_full_imputed_SNPs_no_rsID.txt
+plink -bfile WTCCCT1D_full_imputed_rsID --exclude  WTCCCT1D_full_imputed_SNPs_no_rsID.txt --out  WTCCCT1D_full_imputed_rsID_exChr --make-bed
+
+#remove all the chr non rsID from WTCCCT1D_full_imputed_SNPs_below0.8_rsID.txt
+cat WTCCCT1D_full_imputed_SNPs_below0.8_rsID.txt | grep -v "chr" | sort > WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr.txt
+
+# using python with numpy and pandas to find duplicated imputed SNPs with rsID
+>>> import numpy as np
+>>> import pandas as pd
+
+>>> import csv
+
+
+>>> inf = open('../tmp_WTCCCT1D_full_imputed_rsID_SNPs_withreID.txt')
+>>> reader = csv.reader(inf, delimiter="\t")
+>>> one_col = list(zip(*reader))[0]
+
+>>> len(one_col)
+39380116
+>>> np_one_col = np.array(one_col)
+>>> print(one_col[0:10])
+('rs10', 'rs1000000', 'rs10000000', 'rs1000000112', 'rs1000000129', 'rs1000000137', 'rs1000000219', 'rs1000000269', 'rs1000000289', 'rs10000003')
+>>> pd_one_col = pd.Series(np_one_col)
+>>> dup_one_col = pd_one_col[pd_one_col.duplicated()]
+>>> len(dup_one_col)
+112490
+>>> len(dup_one_col.unique())
+112306
+>>> np.savetxt('WTCCCT1D_imputed_SNPs_rsID_duplicated.txt', dup_one_col.unique(), delimiter='\n')
+Traceback (most recent call last):
+  File "/home/ubuntu/MyVolumeStore/anaconda3/lib/python3.6/site-packages/numpy/lib/npyio.py", line 1376, in savetxt
+    v = format % tuple(row) + newline
+TypeError: must be real number, not str
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/ubuntu/MyVolumeStore/anaconda3/lib/python3.6/site-packages/numpy/lib/npyio.py", line 1380, in savetxt
+    % (str(X.dtype), format))
+TypeError: Mismatch between array dtype ('object') and format specifier ('%.18e')
+>>> type(dup_one_col.unique())
+<class 'numpy.ndarray'>
+>>> thefile = open('WTCCCT1D_imputed_SNPs_rsID_duplicated.txt', 'w')
+>>> for item in dup_one_col.unique():
+... thefile.write("%s\n" % item)
+  File "<stdin>", line 2
+    thefile.write("%s\n" % item)
+          ^
+IndentationError: expected an indented block
+>>> thefile.write("%s\n" % item)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'item' is not defined
+>>> for item in dup_one_col.unique():
+...     thefile.write("%s\n" % item)
+ 
+ thefile.close()
+ thefile = open('WTCCCT1D_imputed_SNPs_rsID_duplicated.txt', 'w')
+ list_duplicated_one_col = list(dup_one_col.unique())
+ for item in list_duplicated_one_col:
+	thefile.write(str(item))
+	thefile.write('\n')
+
+thefile.close()
+
+# checking duplicated SNPs with rsID in the below 0.08 checking file
+# using R
+
+cat WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr.txt | cut -f2 > imputed_SNPs_below0.8_rsID_exChr_SNPlist.txt
+
+R
+library(data.table)
+bim=fread("imputed_SNPs_below0.8_rsID_exChr_SNPlist.txt",header = F)
+head (bim)
+             V1
+1: rs1000003079
+2: rs1000003420
+3: rs1000003694
+4: rs1000014565
+5: rs1000020858
+6: rs1000024890
+
+dups = unique(bim$V1[duplicated(bim$V1)])
+
+> head(bim$V1)
+[1] "rs1000003079" "rs1000003420" "rs1000003694" "rs1000014565" "rs1000020858"
+[6] "rs1000024890"
+> dups = unique(bim$V1[duplicated(bim$V1)])
+> length(dups)
+[1] 83808
+> length(bim$V1)
+[1] 33048045
+> head (dups)
+[1] "rs1008232906" "rs10082471"   "rs1009286360" "rs1011033423" "rs10128181"
+[6] "rs10159499"
+write.table(dups,"imputed_SNPs_below0.8_rsID_exChr_SNPlist-duplicated.txt",col=F,row=F,sep="\t",quote=F
+
+
+# python testing
+>>> test_table = pd.read_table('test_file_for_dupldated_ID.txt', header = None, names= ['v1','v2','v3','v4','v5','v6'])
+>>> pos = test_table.index[test_table.v2 == "rs541172944"]
+>>> for item in pos:
+...     tmp = test_table.v2[item] + '_' + test_table.v5[item] + test_table.v6[item]
+...     test_table.v2[item] = tmp
+...
+__main__:3: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+>>> test_table
+   v1              v2  v3     v4 v5 v6
+0   1     rs571093408   0  13380  G  C
+1   1  rs541172944_AG   0  16071  A  G
+2   1     rs529651976   0  16141  T  C
+3   1     rs866639523   0  16280  C  T
+4   1     rs200943160   0  49298  T  C
+5   1  rs541172944_AC   0  54353  A  C
+6   1  rs541172944_TG   0  54564  T  G
+7   1     rs561234294   0  54591  G  A
+8   1     rs866639523   0  54676  T  C
+9   1     rs552304420   0  54712  C  T
+>>>
+>>> pos = test_table.index[test_table.v2 == "rs541172944"]
+>>> pos
+Int64Index([], dtype='int64')
+>>> if pos == None : print ('yes')
+...
+>>> for x in pos:
+...     print('yes')
+...
+>>> if len(pos) == 0: print ('yes')
+...
+yes
+>>>
+
+>>> test_table = pd.read_table('test_file_for_dupldated_ID.txt', header = None, names= ['v1','v2','v3','v4','v5','v6'])
+>>> for item in pos:
+...     tmp = test_table.v2[item] + '_' + test_table.v5[item] + test_table.v6[item]
+...     test_table.loc[item,'v2'] = tmp
+...
+>>> test_table
+   v1              v2  v3     v4 v5 v6
+0   1     rs571093408   0  13380  G  C
+1   1  rs541172944_AG   0  16071  A  G
+2   1     rs529651976   0  16141  T  C
+3   1     rs866639523   0  16280  C  T
+4   1     rs200943160   0  49298  T  C
+5   1  rs541172944_AC   0  54353  A  C
+6   1  rs541172944_TG   0  54564  T  G
+7   1     rs561234294   0  54591  G  A
+8   1     rs866639523   0  54676  T  C
+9   1     rs552304420   0  54712  C  T
+>>>
+
+>>> for x in dup_SNPs.d1:
+...     pos = test_table.index[test_table.v2 == x]
+...     for item in pos:
+...
+
+>>> dup_SNPs = pd.read_table('test_dup_ids.txt', header = None, names = ['d1'])
+>>> dup_SNPs
+            d1
+0  rs541172944
+1  rs866639523
+>>> type (dup_SNPs.d1)
+<class 'pandas.core.series.Series'>
+>>> for x in dup_SNPs.d1:
+...     print (x)
+...
+rs541172944
+rs866639523
+>>> for x in dup_SNPs.d1:
+...     pos = test_table.index[test_table.v2 == x]
+...     for item in pos:
+...
+  File "<stdin>", line 3
+    for item in pos:
+                   ^
+IndentationError: expected an indented block
+>>> test_table = pd.read_table('test_file_for_dupldated_ID.txt', header = None, names= ['v1','v2','v3','v4','v5','v6'])
+>>> for x in dup_SNPs.d1:
+...     pos = test_table.index[test_table.v2 == x]
+...     for item in pos:
+...             tmp = test_table.v2[item] + '_' + test_table.v5[item] + test_table.v6[item]
+...             test_table.loc[item,'v2'] = tmp
+...
+>>> test_table
+   v1              v2  v3     v4 v5 v6
+0   1     rs571093408   0  13380  G  C
+1   1  rs541172944_AG   0  16071  A  G
+2   1     rs529651976   0  16141  T  C
+3   1  rs866639523_CT   0  16280  C  T
+4   1     rs200943160   0  49298  T  C
+5   1  rs541172944_AC   0  54353  A  C
+6   1  rs541172944_TG   0  54564  T  G
+7   1     rs561234294   0  54591  G  A
+8   1  rs866639523_TC   0  54676  T  C
+9   1     rs552304420   0  54712  C  T
+>>>
+
+>>> test_table.to_csv('changed_file.txt', sep='\t', index=False, header = False)
+
+## new version
+
+pos = test_table.index[test_table.v2.isin(dup_SNPs.d1)]
+
+# I have just found that the below 0.08 checking file will remove majority of the SNPs in the bim file. Therefore, I will remove the below standard SNPs which are not duplicated first
+cat WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr.txt | cut -f2 | sort | uniq > WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr_SNPlist.txt
+comm -13 WTCCCT1D_imputed_SNPs_rsID_duplicated_sorted.txt WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr_SNPlist.txt > unique_SNPs_below0.08_rsID_exChr.txt
+
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr --exclude  unique_SNPs_below0.08_rsID_exChr.txt --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08Uniq --make-bed
+
+
+#18/07/2018 python to create a duplicated top file 
+>>> import numpy as np
+>>> import pandas as pd
+>>> dup_SNPs = pd.read_table('WTCCCT1D_imputed_SNPs_rsID_duplicated_sorted.txt', header = None, names = ['d1'])
+>>> dup_SNPs.head()
+           d1
+0  rs10000462
+1  rs10000598
+2  rs10000664
+3  rs10000708
+4  rs10000793
+>>> len(dup_SNPs.d1)
+112306
+>>> v1 = np.repeat("Du", 112306)
+>>> head(v1)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'head' is not defined
+>>> v1.head()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+AttributeError: 'numpy.ndarray' object has no attribute 'head'
+>>> v1[1:10]
+array(['Du', 'Du', 'Du', 'Du', 'Du', 'Du', 'Du', 'Du', 'Du'], dtype='<U2')
+>>> v3 = np.repeat("Du", 112306)
+>>> v4 = np.repeat("Du", 112306)
+>>> v5 = np.repeat("Du", 112306)
+>>> v6 = np.repeat("Du", 112306)
+>>> v7 = np.repeat("Du", 112306)
+>>> v8 = np.repeat("Du", 112306)
+>>> v9 = np.repeat("Du", 112306)
+>>> new_file = pd.DataFrame(v1,dup_SNPs.d1,v3,v4,v5,v6,v7,v8,v9, columns = ['v1','v2','v3','v4','v5','v6','v7','v8','v9'])
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: __init__() got multiple values for argument 'columns'
+>>> new_file = pd.DataFrame('v1':v1,'v2':dup_SNPs.d1,'v3':v3,'v4':v4,'v5':v5,'v6':v6,'v7':v7,'v8':v8,'v9':v9)
+  File "<stdin>", line 1
+    new_file = pd.DataFrame('v1':v1,'v2':dup_SNPs.d1,'v3':v3,'v4':v4,'v5':v5,'v6':v6,'v7':v7,'v8':v8,'v9':v9)
+                                ^
+SyntaxError: invalid syntax
+>>> new_file = pd.DataFrame({'v1':v1,'v2':dup_SNPs.d1,'v3':v3,'v4':v4,'v5':v5,'v6':v6,'v7':v7,'v8':v8,'v9':v9})
+>>> new_file.head()
+   v1          v2  v3  v4  v5  v6  v7  v8  v9
+0  Du  rs10000462  Du  Du  Du  Du  Du  Du  Du
+1  Du  rs10000598  Du  Du  Du  Du  Du  Du  Du
+2  Du  rs10000664  Du  Du  Du  Du  Du  Du  Du
+3  Du  rs10000708  Du  Du  Du  Du  Du  Du  Du
+4  Du  rs10000793  Du  Du  Du  Du  Du  Du  Du
+>>> newfile.to_csv('duplicated_SNPs_below0.08.txt', sep='\t', index=False, header = False)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'newfile' is not defined
+>>> new_file.to_csv('duplicated_SNPs_below0.08.txt', sep='\t', index=False, header = False)
+>>>
+
+
+# 19/07/2018
+# I decided to remove all the SNPs which are below 0.08 Input2 scores.
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr --exclude  WTCCCT1D_full_imputed_SNPs_below0.8_rsID_exChr_SNPlist.txt --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08 --make-bed
+
+# replace the imputed fam file with the pre-inputed fam file
+mv WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08.fam WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08.old.fam
+cp T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped.fam WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08.fam
+
+# we have the imputed and cleaned T1D WTCCC dataset
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08  --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08_checked --make-bed --geno 0.05 --hwe 1e-6 --maf 0.01 

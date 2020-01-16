@@ -1,0 +1,150 @@
+
+06/07/2018
+
+Flipping SNPs
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ head Affy-NSP-STY-b37.58-v4.strand
+SNP_A-1780619   1       50661138        96.969696969697 -
+SNP_A-1780618   4       104675512       96.969696969697 +
+SNP_A-1780617   18      26599922        100     +
+SNP_A-1780778   5       65190626        100     +
+SNP_A-1780616   12      93021674        100     +
+SNP_A-1780613   12      25671066        100     +
+SNP_A-1780419   1       84875173        96.969696969697 -
+SNP_A-1780612   1       192589418       96.969696969697 +
+SNP_A-1780418   5       156390980       100     -
+SNP_A-1780611   4       73900382        100     -
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand | wc -l497458
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand | head
+SNP_A-1780619   -
+SNP_A-1780618   +
+SNP_A-1780617   +
+SNP_A-1780778   +
+SNP_A-1780616   +
+SNP_A-1780613   +
+SNP_A-1780419   -
+SNP_A-1780612   +
+SNP_A-1780418   -
+SNP_A-1780611   -
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand | grep "-" | head
+SNP_A-1780619   -
+SNP_A-1780618   +
+SNP_A-1780617   +
+SNP_A-1780778   +
+SNP_A-1780616   +
+SNP_A-1780613   +
+SNP_A-1780419   -
+SNP_A-1780612   +
+SNP_A-1780418   -
+SNP_A-1780611   -
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand | grep "\t-" | head
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand |sed 's/A-/A=/g' | grep "-" | head
+SNP_A=1780619   -
+SNP_A=1780419   -
+SNP_A=1780418   -
+SNP_A=1780611   -
+SNP_A=1780415   -
+SNP_A=1780574   -
+SNP_A=1780572   -
+SNP_A=1780378   -
+SNP_A=1780376   -
+SNP_A=1780375   -
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f1,5 Affy-NSP-STY-b37.58-v4.strand |sed 's/A-/A=/g' | grep "-" > SNPs_neg_strand_Affy500k_mod.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ wc -l SNPs_neg_strand_Affy500k_mod.txt
+247936 SNPs_neg_strand_Affy500k_mod.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ wc -l Affy-NSP-STY-b37.58-v4.strand
+497458 Affy-NSP-STY-b37.58-v4.strand
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cat SNPs_neg_strand_Affy500k_mod.txt | sed 's/A=/A-/g'| head
+SNP_A-1780619   -
+SNP_A-1780419   -
+SNP_A-1780418   -
+SNP_A-1780611   -
+SNP_A-1780415   -
+SNP_A-1780574   -
+SNP_A-1780572   -
+SNP_A-1780378   -
+SNP_A-1780376   -
+SNP_A-1780375   -
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cat SNPs_neg_strand_Affy500k_mod.txt | sed 's/A=/A-/g'> SNPs_neg_strand_Affy500k.txt
+
+#find SNPs with chromosome 0
+
+grep -Pe "^0" T1D_WTCCC_Case_Control_cleanedQC_maf0.01.bim | head
+
+# remove the SNPs with zero chr from T1D_WTCCC_Case_Control_cleanedQC_maf0.01 and maf0.05
+grep -Pe "^0" T1D_WTCCC_Case_Control_cleanedQC_maf0.01.bim | cut -f2 > T1D_WTCCC_Case_Control_cleanedQC_maf0.01.zero_SNPs.txt
+grep -Pe "^0" T1D_WTCCC_Case_Control_cleanedQC_maf0.05.bim | cut -f2 > T1D_WTCCC_Case_Control_cleanedQC_maf0.05.zero_SNPs.txt
+
+plink -bfile T1D_WTCCC_Case_Control_cleanedQC_maf0.01 --exclude  T1D_WTCCC_Case_Control_cleanedQC_maf0.01.zero_SNPs.txt --out  T1D_WTCCC_Case_Control_cleanedQC_maf0.01_rm_zeroChr --make-bed
+
+plink -bfile T1D_WTCCC_Case_Control_cleanedQC_maf0.05 --exclude  T1D_WTCCC_Case_Control_cleanedQC_maf0.05.zero_SNPs.txt --out  T1D_WTCCC_Case_Control_cleanedQC_maf0.05_rm_zeroChr --make-bed
+
+# finding SNPs with negative strand from the T1D WTCCCC bin files
+
+grep SNP_A ids with negative strand from Affy-NSP-STY-b37.58-v4.strand to create SNPs_neg_strand_Affy500k.txt
+
+
+cat snps_* | cut -f4,5 > WTCCC_SNP_A_and_rsID_table.txt 
+
+
+python Create_rsID_for_SNPs_neg_table.py
+
+
+
+cat SNPs_neg_strand_Affy500k_rsID.txt | cut -f2 | sort |uniq > Aff500k_neg_SNPs.txt
+
+
+cut -f2 T1D_WTCCC_Case_Control_cleanedQC2_maf0.01.bim | sort |uniq > maf0.01_SNPs.txt
+
+
+comm -12 maf0.01_SNPs.txt Aff500k_neg_SNPs.txt > tmp
+mv tmp maf0.01_SNPs_neg.txt
+
+
+
+
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ cut -f2 T1D_WTCCC_Case_Control_cleanedQC2_maf0.05.bim | sort | uniq > maf0.05_SNPs.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ wc -l maf0.05_SNPs.txt
+375194 maf0.05_SNPs.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ head SNPs_neg_strand_Affy500k_uniq.txt
+SNP_A-1780271
+SNP_A-1780272
+SNP_A-1780274
+SNP_A-1780278
+SNP_A-1780283
+SNP_A-1780286
+SNP_A-1780290
+SNP_A-1780293
+SNP_A-1780294
+SNP_A-1780295
+
+$ comm -12 maf0.05_SNPs.txt Aff500k_neg_SNPs.txt > maf0.05_SNPs_neg.txt
+
+# flip the SNPs with negative strands 
+plink --bfile T1D_WTCCC_Case_Control_cleanedQC2_maf0.01 --flip maf0.01_SNPs_neg.txt --make-bed --out T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped
+
+plink --bfile T1D_WTCCC_Case_Control_cleanedQC2_maf0.05 --flip maf0.05_SNPs_neg.txt --make-bed --out T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped
+
+#Data QC and fix the first allele as the reference allele output as vcf file
+plink --bfile T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped  --real-ref-alleles --recode vcf bgz --out T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped_realref --output-chr M --geno 0.05 --hwe 1e-6 --maf 0.01
+plink --bfile T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped  --real-ref-alleles --recode vcf bgz --out T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped_realref --output-chr M --geno 0.05 --hwe 1e-6 --maf 0.05
+
+
+08/07/2018
+# Reference alignment
+bcftools norm -f human_g1k_v37.fasta -cs T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped_realref.vcf.gz -o T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped_realref_refalign.vcf.gz
+
+bcftools norm -f human_g1k_v37.fasta -cs T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped_realref.vcf.gz -o T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped_realref_refalign.vcf.gz
+
+
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ bcftools norm -f human_g1k_v37.fasta -cs T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped_realref.vcf.gz -o T1D_WTCCC_Case_Control_cleanedQC2_maf0.01_flipped_realref_refalign.vcf.gz
+Lines   total/split/realigned/skipped:  419114/0/0/0
+REF/ALT total/modified/added:   419114/90432/173967
+
+
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/Imputation_pre/flipping$ bcftools norm -f human_g1k_v37.fasta -cs T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped_realref.vcf.gz -o T1D_WTCCC_Case_Control_cleanedQC2_maf0.05_flipped_realref_refalign.vcf.gz
+Lines   total/split/realigned/skipped:  375194/0/0/0
+REF/ALT total/modified/added:   375194/83483/155557
+
+
+
+

@@ -1,0 +1,6 @@
+#21/10/2018
+# rename the WTCCCT1D_full_imputed_rsID_with_chr23.bim to WTCCCT1D_full_imputed_rsID.bim
+
+# change the 2 step to replace and remove the dot_missing_SNPs
+mv 2_replaced_dot_missing_SNPs/ 2b_replaced_and_removed_dot_missing_SNPs/
+cp ../4b_remove_below0.03_SNPs_and_replace_fam/WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.03.fam WTCCCT1D_full_imputed.fam

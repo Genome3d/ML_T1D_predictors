@@ -1,0 +1,4 @@
+# extract non-rsID SNPs
+ cat WTCCCT1D_full_imputed_rsID.bim | grep "chr" | cut -f2 | sort | uniq > Imputed_non_rsID_list.txt
+
+ plink -bfile WTCCCT1D_full_imputed_rsID --exclude  Imputed_non_rsID_list.txt  --out  WTCCCT1D_full_imputed_rsID_exChr --make-bed

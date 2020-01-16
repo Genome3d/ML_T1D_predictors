@@ -1,0 +1,8 @@
+# filter out SNPs below impute score 0.3
+
+cat WTCCCT1D_full_imputed_SNPs_below0.3_rsID_chr23.txt | cut -f2 | sort | uniq > WTCCCT1D_full_imputed_SNPs_below0.3_rsID_chr23_SNPlist.txt
+
+plink -bfile ../3b_remove_non_rsID_SNPs_and_replace_fam/WTCCCT1D_full_imputed_rsID_exChr --exclude  WTCCCT1D_full_imputed_SNPs_below0.3_rsID_SNPlist.txt --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3 --make-bed
+
+# we have the imputed and cleaned T1D WTCCC dataset with no hwe filtering
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3  --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked --make-bed --geno 0.05 --maf 0.01 

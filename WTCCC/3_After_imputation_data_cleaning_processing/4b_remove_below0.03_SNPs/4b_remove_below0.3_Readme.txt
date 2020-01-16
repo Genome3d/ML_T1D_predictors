@@ -1,0 +1,27 @@
+In the first phase of the ML logistic model development, the WTCCC T1D imputed dataset was found only to have 85 common SNPs with Denis T1D tissue-specific eQTL table (113 SNPs).
+ 21 of the missing SNPs were removed by hwe filtering. Nevertheless, by examining some published papers, hwe filtering is not a standard QC for post data imputation for the assumption that the imputation processes procedure accurate genotype data. 
+On the other hand, this filtering is required to apply to the pre and post imputation only on the control data only. 
+Hwe testing is to detect excessive heterozygous genotype data created by missed calling. 
+But the excess heterogeneity could also be the valuable and associated mutation signals. 
+The idea is that if this is caused by genotype calling errors, the excessive heterogeneity may not appear in control data. 
+
+Daniel reported that there were 23 SNPs removed by the minor allele frequency, and Hardy–Weinberg equilibrium filtering from the imputed WTCCC T1D dataset. 
+Among them, two SNPs were removed by minor allele frequency filtering with values < 0.01. 
+Twenty-one SNPs were removed by Hardy-Weinberg equilibrium (hwe) filtering with p-values < 10-6 . 
+Daniel found that hwe filtering was not used after data imputation in many published papers under the assumption that imputation processes produce accurate imputed genotype data. 
+On the other hand, excessive hwe filtering could remove potential valuable SNP signals of phenotypes. 
+Hence, Justin and William suggested that the post hwe filtering could be removed in the post imputation QC to recover the 21 missing SNPs.
+
+Therefore the imputed WTCCC T1D data was recleaned without hwe filtering to recover the 21 T1D missing SNPs.
+
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked.bim
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked.bed
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked.fam
+
+
+On the other hand, imputed WTCCC T1D data with hwe filtering:
+
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked_hwe.bed
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked_hwe.fam
+WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked_hwe.bim 
+

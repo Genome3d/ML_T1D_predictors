@@ -1,0 +1,79 @@
+# 19/07/2018 to extract the Denise and GWAS_catalog SNPs form the T1D WTCCC dataset
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.08_checked --extract Denis_and_GWAS_catalog_T1D_com_SNPlist.txt  --out  Denise_and_GWAS_catalog_T1D_com_and_GWAS_catalog_T1D_com --make-bed
+
+python find_rsID_for_dot_SNP_Input2_scores_checked0.03.py
+Finish !!
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/T1D_WTCCC_imputation_post/post_imputation_cleaning/4b_remove_below0.03_SNPs_and_replace_fam$ ls -lh
+total 2.4G
+-rw-rw-r-- 1 ubuntu ubuntu 2.6K Jul 19 05:37 find_rsID_for_dot_SNP_Input2_scores_checked0.03.py
+-rw-rw-r-- 1 ubuntu ubuntu 1.3G Jul 19 08:41 WTCCCT1D_full_imputed_SNPs_below0.3_rsID.txt
+-rw-rw-r-- 1 ubuntu ubuntu 1.2G Jul 19 05:29 WTCCCT1D_full_imputed_SNPs_below0.3.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/T1D_WTCCC_imputation_post/post_imputation_cleaning/4b_remove_below0.03_SNPs_and_replace_fam$  head WTCCCT1D_full_imputed_SNPs_below0.3_rsID.txt
+1       rs571093408     13380   C       G       0       9786    7.69941e-05     1.25013e-09
+1       rs541172944     16071   G       A       0       9786    0.000123191     1.25013e-09
+1       rs529651976     16141   C       T       0       9786    0.000138589     1.25013e-09
+1       rs866639523     16280   T       C       0       9786    0.00066215      1.25013e-09
+1       rs200943160     49298   T       C       9786    9786    0.640145        9.82281e-10
+1       rs140052487     54353   C       A       0       9786    0.000908531     1.25013e-09
+1       rs558796213     54564   G       T       0       9786    0.00026178      1.25013e-09
+1       rs561234294     54591   A       G       0       9786    0.000215584     1.25013e-09
+1       rs2462492       54676   C       T       0       9786    0.372267        9.82773e-10
+1       rs552304420     54712   T       C       0       9786    0.000123191     1.25013e-09
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/T1D_WTCCC_imputation_post/post_imputation_cleaning/4b_remove_below0.03_SNPs_and_replace_fam$ cat WTCCCT1D_full_imputed_SNPs_below0.3_rsID.txt | cut -f2 | sort | uniq > WTCCCT1D_full_imputed_SNPs_below0.3_rsID_SNPlist.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/T1D_WTCCC_imputation_post/post_imputation_cleaning/4b_remove_below0.03_SNPs_and_replace_fam$ wc -l WTCCCT1D_full_imputed_SNPs_below0.3_rsID_SNPlist.txt
+23320688 WTCCCT1D_full_imputed_SNPs_below0.3_rsID_SNPlist.txt
+ubuntu@daniel-ts-project-nectarvm:~/MyVolumeStore2/T1D_WTCCC_imputation_post/post_imputation_cleaning/4b_remove_below0.03_SNPs_and_replace_fam$
+
+plink -bfile ../4_remove_below0.08_SNPs_and_replace_fam/WTCCCT1D_full_imputed_rsID_exChr --exclude  WTCCCT1D_full_imputed_SNPs_below0.3_rsID_SNPlist.txt --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.03 --make-bed
+
+# we have the imputed and cleaned T1D WTCCC dataset
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.03  --out  WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked --make-bed --geno 0.05 --hwe 1e-6 --maf 0.01 
+
+# to extract Denise and GWAS catalog T1D com SNPs from the T1D WTCCCC imputed dataset filted by input2 scores 0.3
+plink -bfile WTCCCT1D_full_imputed_rsID_exChr_RmBlow0.3_checked --extract Denis_and_GWAS_catalog_T1D_com_SNPlist.txt  --out  Denise_and_GWAS_catalog_T1D_com_and_GWAS_catalog_T1D_by0.3 --make-bed
+
+# create a genotype table
+plink -bfile Denise_and_GWAS_catalog_T1D_com_and_GWAS_catalog_T1D_by0.3 --recode A  --out  Denise_and_GWAS_catalog_T1D_com_and_GWAS_catalog_T1D_by0.3 --1
+
+# using python to create eQTL table
+python
+
+>>> TSG_list = pd.read_table('Denise_T1D_sig_tissue_SNP_gene_list_sorted.txt')
+
+
+>>> eQTL_table = pd.read_table('Denise_and_GWAS_catalog_T1D_com_and_GWAS_catalog_T1D_by0.3.raw',sep = " ")
+>>> len(eQTL_table.columns)
+167
+>>> eQTL_table.columns[1:10]
+Index(['IID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE', 'rs2269241_C', 'rs11580078_G',
+       'rs7533564_C', 'rs2066363_C'],
+      dtype='object')
+>>> eQTL_table.columns[0:10]
+Index(['FID', 'IID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE', 'rs2269241_C',
+       'rs11580078_G', 'rs7533564_C', 'rs2066363_C'],
+      dtype='object')
+>>> eQTL_table.IID.head()
+0    WTCCC66061
+1    WTCCC66062
+2    WTCCC66063
+3    WTCCC66064
+4    WTCCC66065
+Name: IID, dtype: object
+>>> eQTL_table.shape()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: 'tuple' object is not callable
+>>> eQTL_table.shape
+(4893, 167)
+>>> TSG_list.shape
+(1467, 4)
+
+>>> geno_SNPlist = eQTL_table.columns[6:167]
+>>> len(geno_SNPlist)
+161
+>>> geno_SNPlist[0]
+'rs2269241_C'
+>>> geno_SNPlist[160]
+'rs2807264_C'
+>>>
+tmp_SNP1 = geno_SNPlist[0]

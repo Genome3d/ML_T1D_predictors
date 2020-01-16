@@ -1,0 +1,159 @@
+# remove SNP for controls
+plink -bfile Chiamo_allchr_merge_bloodbank --exclude  remove_SNP_A-2280133.txt --out  Chiamo_allchr_merge_bloodbank_without_A-2280133 --make-bed --allow-extra-chr
+plink -bfile Chiamo_allchr_merge_cohort --exclude  remove_SNP_A-2280133.txt --out  Chiamo_allchr_merge_cohort_without_A-2280133 --make-bed --allow-extra-chr
+
+T1D_Chiamo_allchr_merge_cohort has been created without SNP_A-2280133
+
+# combine T1D case and control files
+plink -bfile T1D_Chiamo_allchr_merge_cohort --merge-list T1D_case_control_merge_list.txt --out T1D_case_control 
+
+# replace the WTCCC array ids with rsID
+plink --update-name WTCCC_SNP_rsID_list.txt -bfile T1D_case_control --out T1D_case_control_rsID --make-bed
+
+
+#create a table with rsIDs and their position retrived from dbSNP
+cut rsID outfrom the bim files
+create a program "Create_rsID_postion.py" to retrieve the postion from our dbSNP database
+
+# remove rsIDs having no info in dbSNP
+grep -v "Error" WTCCC_rsID_position_dbSNP_b151.txt > WTCCC_rsID_position_dbSNP_b151_No_Error.txt
+
+cut -f1 rsID_not_found_in_dbSNP_151.txt > tmp
+cat tmp > rsID_not_found_in_dbSNP_151_list.txt
+
+plink -bfile T1D_case_control_rsID --exclude  rsID_not_found_in_dbSNP_151_list.txt --out  T1D_case_control_rsID_dbSNP --make-bed
+
+# find out the duplicated SNP from the WTCCC rsID dataset
+cut -f2 T1D_case_control_rsID_dbSNP.bim > WTCCC_rsID_dbSNP.bim_list.txt
+
+python find_duplicated_SNPs.py
+
+# remove the duplicate SNP rs41388745
+plink -bfile T1D_case_control_rsID_dbSNP --exclude  rs41388745.txt --out  T1D_case_control_rsID_dbSNP_no_re41388745 --make-bed
+
+#replace old rsID position with dbSNP h37 b151 position
+plink -bfile T1D_case_control_rsID_dbSNP_no_re41388745 --update-map  WTCCC_rsID_position_dbSNP_b151_No_Error.txt --out  T1D_case_control_rsID_dbSNPpos_no_re41388745 --make-bed 
+
+# create case sample list
+cut -f1,2 T1D_Chiamo_allchr_merge_cohort.fam > T1D_case_samples.txt
+
+# update case and control pheno types
+plink -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745 --make-pheno  T1D_case_samples.txt '*' --out  T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl --make-bed 
+
+# check indivual missingness, outlying homozygosity and discordant sex
+# check sex first
+plink --check-sex --out T1D_WTCCC -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl
+
+R codes:
+> sex = read.table("T1D_WTCCC.sexcheck", header =T)
+> head(sex)
+      FID        IID PEDSEX SNPSEX STATUS F
+1 FAM_58C WTCCC66061      1      1     OK 1
+2 FAM_58C WTCCC66062      1      1     OK 1
+3 FAM_58C WTCCC66063      1      1     OK 1
+4 FAM_58C WTCCC66064      1      1     OK 1
+5 FAM_58C WTCCC66065      1      1     OK 1
+6 FAM_58C WTCCC66066      1      1     OK 1
+> nrow(sex[sex$STATUS != "OK",])
+[1] 14
+> sex_bad = sex[sex$STATUS != "OK",]
+> head sex_bad
+Error: unexpected symbol in "head sex_bad"
+> head (sex_bad)
+        FID          IID PEDSEX SNPSEX  STATUS        F
+129 FAM_58C   WTCCC66203      1      2 PROBLEM  0.01131
+224 FAM_58C   WTCCC66310      1      2 PROBLEM -0.05053
+255 FAM_58C   WTCCC66344      1      2 PROBLEM  0.04788
+383 FAM_58C   WTCCC66516      1      2 PROBLEM  0.06221
+589 FAM_58C WTCCC66779_1      2      1 PROBLEM  1.00000
+937 FAM_58C   WTCCC88266      1      2 PROBLEM  0.12740
+> write.table(sex_bad, file = "remove_sample_badsex.txt", col.name = F, row.name = F, quote = F)
+> write.table(sex_bad, file = "remove_sample_badsex.txt", col.name = F, row.name = F, quote = F, sp = "\t")
+Error in write.table(sex_bad, file = "remove_sample_badsex.txt", col.name = F,  :
+  unused argument (sp = "\t")
+> write.table(sex_bad, file = "remove_sample_badsex.txt", col.name = F, row.name = F, quote = F, sep = "\t")
+
+cut -f1,2 remove_sample_badsex.txt > remove_sample_badsex-list.txt
+
+# remove samples with bad sex from T1D WTCCC data
+
+plink -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl --remove  remove_sample_badsex-list.txt --out  T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex --make-bed
+
+# do outlying homozygosity checking
+plink --het --out T1D_WTCCC -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex
+
+> het = read.table("T1D_WTCCC.het", header =T)
+> head(het)
+      FID        IID O.HOM. E.HOM.  N.NM.          F
+1 FAM_58C WTCCC66061 346547 345800 479508  0.0055270
+2 FAM_58C WTCCC66062 344816 345800 479508 -0.0074200
+3 FAM_58C WTCCC66063 345826 345800 479508  0.0001339
+4 FAM_58C WTCCC66064 347719 345800 479508  0.0142900
+5 FAM_58C WTCCC66065 346951 345800 479508  0.0085480
+6 FAM_58C WTCCC66066 344623 345800 479508 -0.0088640
+> hist(het$F)
+> hist(het$F, breaks = 30)
+> max(het$F)
+[1] 0.09847
+> min (het$F)
+[1] -0.196
+> nrow(het[het$F >0.03,])
+[1] 16
+> nrow(het[het$F >0.02,])
+[1] 48
+> nrow(het[het$F >0.025,])
+[1] 20
+> nrow(het[het$F < -0.04,])
+[1] 29
+> nrow(het[het$F < -0.05,])
+[1] 21
+> nrow(het[het$F < -0.035,])
+[1] 36
+> nrow(het[het$F < -0.03,])
+[1] 48
+> nrow(het)
+[1] 4990
+> het-high = het[het$F > 0.025, c(1,2)]
+Error in het - high = het[het$F > 0.025, c(1, 2)] :
+  could not find function "-<-"
+> het_high = het[het$F > 0.025, c(1,2)]
+> head(het_high)
+         FID        IID
+64   FAM_58C WTCCC66130
+558  FAM_58C WTCCC66748
+570  FAM_58C WTCCC66762
+922  FAM_58C WTCCC88246
+961  FAM_58C WTCCC88323
+1343 FAM_58C WTCCC89062
+> het_low = het[het$F < -0.04, c(1,2)]
+> head(het_low)
+         FID        IID
+652  FAM_58C WTCCC66882
+677  FAM_58C WTCCC66915
+770  FAM_58C WTCCC67048
+793  FAM_58C WTCCC67074
+1019 FAM_58C WTCCC88427
+1120 FAM_58C WTCCC88631
+> write.table(het_high, file = "remove_sample_hethigh.txt", col.name = F, row.name = F, quote = F, sep = "\t")
+> write.table(het_low, file = "remove_sample_hetlow.txt", col.name = F, row.name = F, quote = F, sep = "\t")
+
+cat remove_sample_het* > remove_sample_het.txt
+
+# remove smaple with high or low outlying homozygosity
+plink -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex --remove  remove_sample_het.txt --out  T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex_het --make-bed
+
+# remove samples with missing rate more than 0.05
+plink -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex_het --mind 0.05   --out  T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex_het_mind --make-bed
+
+# check related and duplicate samples
+plink -bfile T1D_case_control_rsID_dbSNPpos_no_re41388745_CaseControl_sex_het_mind --genome --out T1D_WTCCC 
+
+> related = read.table("T1D_WTCCC.genome", header = T)
+> nrow(related[related$PI_HAT > 0.08,])
+[1] 49
+> hist(related$PI_HAT, breaks = 100)
+> hist(related$PI_HAT, breaks = 100)
+> related_bad = related[related$PI_HAT > 0.08,c(1,2,3,4)]
+> write.table(related_bad, file = "remove_sample_related_pairs.txt", col.name = F, row.name = F, quote = F, sep = "\t")
+>
+
